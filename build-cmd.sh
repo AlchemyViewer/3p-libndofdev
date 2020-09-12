@@ -39,13 +39,19 @@ case "$AUTOBUILD_PLATFORM" in
     windows*)
         pushd "$TOP/$SOURCE_DIR/src"
             load_vsvars
-            build_sln "$PROJECT.sln" "Release|$AUTOBUILD_WIN_VSPLATFORM"
+            build_sln "$PROJECT.sln" "Debug" "$AUTOBUILD_WIN_VSPLATFORM"
+            build_sln "$PROJECT.sln" "Release" "$AUTOBUILD_WIN_VSPLATFORM"
     
+            mkdir -p "$stage/lib/debug"
             mkdir -p "$stage/lib/release"
 
             if [ "$AUTOBUILD_ADDRSIZE" = 32 ]
-            then cp Release/*\.lib $stage/lib/release/
-            else cp x64/Release/*\.lib $stage/lib/release/
+            then
+                cp Debug/libndofdev.{lib,pdb} $stage/lib/debug/
+                cp Release/libndofdev.{lib,pdb} $stage/lib/release/
+            else
+                cp x64/Debug/libndofdev.{lib,pdb} $stage/lib/debug/
+                cp x64/Release/libndofdev.{lib,pdb} $stage/lib/release/
             fi
         popd
     ;;
