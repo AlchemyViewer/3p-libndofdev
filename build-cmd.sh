@@ -12,7 +12,7 @@ set -u
 PROJECT="libndofdev"
 # If there's a version number embedded in the source code somewhere, we
 # haven't yet found it.
-VERSION="0.1"
+VERSION="0.1.0"
 SOURCE_DIR="$PROJECT"
 
 if [ -z "$AUTOBUILD" ] ; then 
@@ -32,8 +32,7 @@ source_environment_tempfile="$stage/source_environment.sh"
 "$autobuild" source_environment > "$source_environment_tempfile"
 . "$source_environment_tempfile"
 
-build=${AUTOBUILD_BUILD_ID:=0}
-echo "${VERSION}.${build}" > "${stage}/VERSION.txt"
+echo "${VERSION}" > "${stage}/VERSION.txt"
 
 case "$AUTOBUILD_PLATFORM" in
     windows*)
