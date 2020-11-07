@@ -63,7 +63,8 @@
           </map>
           <key>manifest</key>
           <array>
-            <string>lib/release/libndofdev.dylib</string>
+            <string>lib/debug/libndofdev.dylib*</string>
+            <string>lib/release/libndofdev.dylib*</string>
           </array>
           <key>name</key>
           <string>darwin</string>
