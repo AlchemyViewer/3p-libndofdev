@@ -142,12 +142,12 @@ case "$AUTOBUILD_PLATFORM" in
         popd
 
         pushd "${stage}/lib/debug"
-            fix_dylib_id "libndofdev.dylib"
+            install_name_tool -id "@rpath/libndofdev.dylib" "libndofdev.dylib"
             strip -x -S libndofdev.dylib
         popd
 
         pushd "${stage}/lib/release"
-            fix_dylib_id "libndofdev.dylib"
+            install_name_tool -id "@rpath/libndofdev.dylib" "libndofdev.dylib"
             strip -x -S libndofdev.dylib
         popd
     ;;
