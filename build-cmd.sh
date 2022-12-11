@@ -38,8 +38,8 @@ case "$AUTOBUILD_PLATFORM" in
     windows*)
         pushd "$TOP/$SOURCE_DIR/src"
             load_vsvars
-            build_sln "$PROJECT.sln" "Debug" "$AUTOBUILD_WIN_VSPLATFORM"
-            build_sln "$PROJECT.sln" "Release" "$AUTOBUILD_WIN_VSPLATFORM"
+            build_sln "$PROJECT.sln" "Debug|$AUTOBUILD_WIN_VSPLATFORM"
+            build_sln "$PROJECT.sln" "Release|$AUTOBUILD_WIN_VSPLATFORM"
     
             mkdir -p "$stage/lib/debug"
             mkdir -p "$stage/lib/release"
@@ -95,6 +95,8 @@ case "$AUTOBUILD_PLATFORM" in
                 -DCMAKE_XCODE_ATTRIBUTE_CLANG_X86_VECTOR_INSTRUCTIONS=sse4.2 \
                 -DCMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LANGUAGE_STANDARD="c++17" \
                 -DCMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY="libc++" \
+                -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED="NO" \
+                -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED="NO" \
                 -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY="" \
                 -DCMAKE_OSX_ARCHITECTURES:STRING=x86_64 \
                 -DCMAKE_OSX_DEPLOYMENT_TARGET=${MACOSX_DEPLOYMENT_TARGET} \
@@ -125,6 +127,8 @@ case "$AUTOBUILD_PLATFORM" in
                 -DCMAKE_XCODE_ATTRIBUTE_CLANG_X86_VECTOR_INSTRUCTIONS=sse4.2 \
                 -DCMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LANGUAGE_STANDARD="c++17" \
                 -DCMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY="libc++" \
+                -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED="NO" \
+                -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED="NO" \
                 -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY="" \
                 -DCMAKE_OSX_ARCHITECTURES:STRING=x86_64 \
                 -DCMAKE_OSX_DEPLOYMENT_TARGET=${MACOSX_DEPLOYMENT_TARGET} \
