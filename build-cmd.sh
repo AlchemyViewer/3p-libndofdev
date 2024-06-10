@@ -38,8 +38,8 @@ case "$AUTOBUILD_PLATFORM" in
     windows*)
         pushd "$TOP/$SOURCE_DIR/src"
             load_vsvars
-            build_sln "$PROJECT.sln" "Debug|$AUTOBUILD_WIN_VSPLATFORM"
-            build_sln "$PROJECT.sln" "Release|$AUTOBUILD_WIN_VSPLATFORM"
+            msbuild.exe $(cygpath -w "$PROJECT.sln") /p:Configuration=Debug /p:Platform=$AUTOBUILD_WIN_VSPLATFORM
+            msbuild.exe $(cygpath -w "$PROJECT.sln") /p:Configuration=Release /p:Platform=$AUTOBUILD_WIN_VSPLATFORM
     
             mkdir -p "$stage/lib/debug"
             mkdir -p "$stage/lib/release"
@@ -55,14 +55,6 @@ case "$AUTOBUILD_PLATFORM" in
         popd
     ;;
     darwin*)
-        # Setup osx sdk platform
-        SDKNAME="macosx"
-        export SDKROOT=$(xcodebuild -version -sdk ${SDKNAME} Path)
-
-        # Deploy Targets
-        X86_DEPLOY=10.15
-        ARM64_DEPLOY=11.0
-
         # Setup build flags
         ARCH_FLAGS_X86="-arch x86_64 -mmacosx-version-min=${X86_DEPLOY} -isysroot ${SDKROOT} -msse4.2"
         ARCH_FLAGS_ARM64="-arch arm64 -mmacosx-version-min=${ARM64_DEPLOY} -isysroot ${SDKROOT}"
@@ -81,37 +73,7 @@ case "$AUTOBUILD_PLATFORM" in
         mkdir -p "$stage/lib/release/"
 
         # x86 Deploy Target
-        export MACOSX_DEPLOYMENT_TARGET=${X86_DEPLOY}
-
-        mkdir -p "build_debug_x86"
-        pushd "build_debug_x86"
-            CFLAGS="$ARCH_FLAGS_X86 $DEBUG_CFLAGS" \
-            CXXFLAGS="$ARCH_FLAGS_X86 $DEBUG_CXXFLAGS" \
-            CPPFLAGS="$ARCH_FLAGS_X86 $DEBUG_CPPFLAGS" \
-            LDFLAGS="$ARCH_FLAGS_X86 $DEBUG_LDFLAGS" \
-            cmake $TOP/../$SOURCE_DIR -GXcode -DBUILD_SHARED_LIBS:BOOL=ON \
-                -DCMAKE_C_FLAGS="$ARCH_FLAGS_X86 $DEBUG_CFLAGS" \
-                -DCMAKE_CXX_FLAGS="$ARCH_FLAGS_X86 $DEBUG_CXXFLAGS" \
-                -DCMAKE_XCODE_ATTRIBUTE_GCC_OPTIMIZATION_LEVEL="0" \
-                -DCMAKE_XCODE_ATTRIBUTE_GCC_FAST_MATH=NO \
-                -DCMAKE_XCODE_ATTRIBUTE_GCC_GENERATE_DEBUGGING_SYMBOLS=YES \
-                -DCMAKE_XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT=dwarf-with-dsym \
-                -DCMAKE_XCODE_ATTRIBUTE_LLVM_LTO=NO \
-                -DCMAKE_XCODE_ATTRIBUTE_DEAD_CODE_STRIPPING=YES \
-                -DCMAKE_XCODE_ATTRIBUTE_CLANG_X86_VECTOR_INSTRUCTIONS=sse4.2 \
-                -DCMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LANGUAGE_STANDARD="c++17" \
-                -DCMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY="libc++" \
-                -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED="NO" \
-                -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED="NO" \
-                -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY="" \
-                -DCMAKE_OSX_ARCHITECTURES:STRING=x86_64 \
-                -DCMAKE_OSX_DEPLOYMENT_TARGET=${MACOSX_DEPLOYMENT_TARGET} \
-                -DCMAKE_OSX_SYSROOT=${SDKROOT} \
-                -DCMAKE_MACOSX_RPATH=YES \
-                -DCMAKE_INSTALL_PREFIX=$stage
-
-            cmake --build . --config Debug
-        popd
+        export MACOSX_DEPLOYMENT_TARGET=11.0
 
         mkdir -p "build_release_x86"
         pushd "build_release_x86"
@@ -119,60 +81,16 @@ case "$AUTOBUILD_PLATFORM" in
             CXXFLAGS="$ARCH_FLAGS_X86 $RELEASE_CXXFLAGS" \
             CPPFLAGS="$ARCH_FLAGS_X86 $RELEASE_CPPFLAGS" \
             LDFLAGS="$ARCH_FLAGS_X86 $RELEASE_LDFLAGS" \
-            cmake $TOP/../$SOURCE_DIR -GXcode -DBUILD_SHARED_LIBS:BOOL=ON\
+            cmake $TOP/../$SOURCE_DIR -G Ninja -DBUILD_SHARED_LIBS:BOOL=ON \
+                -DCMAKE_BUILD_TYPE=Release \
                 -DCMAKE_C_FLAGS="$ARCH_FLAGS_X86 $RELEASE_CFLAGS" \
                 -DCMAKE_CXX_FLAGS="$ARCH_FLAGS_X86 $RELEASE_CXXFLAGS" \
-                -DCMAKE_XCODE_ATTRIBUTE_GCC_OPTIMIZATION_LEVEL="fast" \
-                -DCMAKE_XCODE_ATTRIBUTE_GCC_FAST_MATH=YES \
-                -DCMAKE_XCODE_ATTRIBUTE_GCC_GENERATE_DEBUGGING_SYMBOLS=YES \
-                -DCMAKE_XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT=dwarf-with-dsym \
-                -DCMAKE_XCODE_ATTRIBUTE_LLVM_LTO=YES \
-                -DCMAKE_XCODE_ATTRIBUTE_DEAD_CODE_STRIPPING=YES \
-                -DCMAKE_XCODE_ATTRIBUTE_CLANG_X86_VECTOR_INSTRUCTIONS=sse4.2 \
-                -DCMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LANGUAGE_STANDARD="c++17" \
-                -DCMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY="libc++" \
-                -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED="NO" \
-                -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED="NO" \
-                -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY="" \
                 -DCMAKE_OSX_ARCHITECTURES:STRING=x86_64 \
                 -DCMAKE_OSX_DEPLOYMENT_TARGET=${MACOSX_DEPLOYMENT_TARGET} \
-                -DCMAKE_OSX_SYSROOT=${SDKROOT} \
                 -DCMAKE_MACOSX_RPATH=YES \
                 -DCMAKE_INSTALL_PREFIX=$stage
 
             cmake --build . --config Release
-        popd
-
-        # ARM64 Deploy Target
-        export MACOSX_DEPLOYMENT_TARGET=${ARM64_DEPLOY}
-
-        mkdir -p "build_debug_arm64"
-        pushd "build_debug_arm64"
-            CFLAGS="$ARCH_FLAGS_ARM64 $DEBUG_CFLAGS" \
-            CXXFLAGS="$ARCH_FLAGS_ARM64 $DEBUG_CXXFLAGS" \
-            CPPFLAGS="$ARCH_FLAGS_ARM64 $DEBUG_CPPFLAGS" \
-            LDFLAGS="$ARCH_FLAGS_ARM64 $DEBUG_LDFLAGS" \
-            cmake $TOP/../$SOURCE_DIR -GXcode -DBUILD_SHARED_LIBS:BOOL=ON \
-                -DCMAKE_C_FLAGS="$ARCH_FLAGS_ARM64 $DEBUG_CFLAGS" \
-                -DCMAKE_CXX_FLAGS="$ARCH_FLAGS_ARM64 $DEBUG_CXXFLAGS" \
-                -DCMAKE_XCODE_ATTRIBUTE_GCC_OPTIMIZATION_LEVEL="0" \
-                -DCMAKE_XCODE_ATTRIBUTE_GCC_FAST_MATH=NO \
-                -DCMAKE_XCODE_ATTRIBUTE_GCC_GENERATE_DEBUGGING_SYMBOLS=YES \
-                -DCMAKE_XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT=dwarf-with-dsym \
-                -DCMAKE_XCODE_ATTRIBUTE_LLVM_LTO=NO \
-                -DCMAKE_XCODE_ATTRIBUTE_DEAD_CODE_STRIPPING=YES \
-                -DCMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LANGUAGE_STANDARD="c++17" \
-                -DCMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY="libc++" \
-                -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED="NO" \
-                -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED="NO" \
-                -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY="" \
-                -DCMAKE_OSX_ARCHITECTURES:STRING=arm64 \
-                -DCMAKE_OSX_DEPLOYMENT_TARGET=${MACOSX_DEPLOYMENT_TARGET} \
-                -DCMAKE_OSX_SYSROOT=${SDKROOT} \
-                -DCMAKE_MACOSX_RPATH=YES \
-                -DCMAKE_INSTALL_PREFIX=$stage
-
-            cmake --build . --config Debug
         popd
 
         mkdir -p "build_release_arm64"
@@ -182,22 +100,11 @@ case "$AUTOBUILD_PLATFORM" in
             CPPFLAGS="$ARCH_FLAGS_ARM64 $RELEASE_CPPFLAGS" \
             LDFLAGS="$ARCH_FLAGS_ARM64 $RELEASE_LDFLAGS" \
             cmake $TOP/../$SOURCE_DIR -GXcode -DBUILD_SHARED_LIBS:BOOL=ON \
+                -DCMAKE_BUILD_TYPE=Release \
                 -DCMAKE_C_FLAGS="$ARCH_FLAGS_ARM64 $RELEASE_CFLAGS" \
                 -DCMAKE_CXX_FLAGS="$ARCH_FLAGS_ARM64 $RELEASE_CXXFLAGS" \
-                -DCMAKE_XCODE_ATTRIBUTE_GCC_OPTIMIZATION_LEVEL="fast" \
-                -DCMAKE_XCODE_ATTRIBUTE_GCC_FAST_MATH=YES \
-                -DCMAKE_XCODE_ATTRIBUTE_GCC_GENERATE_DEBUGGING_SYMBOLS=YES \
-                -DCMAKE_XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT=dwarf-with-dsym \
-                -DCMAKE_XCODE_ATTRIBUTE_LLVM_LTO=YES \
-                -DCMAKE_XCODE_ATTRIBUTE_DEAD_CODE_STRIPPING=YES \
-                -DCMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LANGUAGE_STANDARD="c++17" \
-                -DCMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY="libc++" \
-                -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED="NO" \
-                -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED="NO" \
-                -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY="" \
                 -DCMAKE_OSX_ARCHITECTURES:STRING=arm64 \
                 -DCMAKE_OSX_DEPLOYMENT_TARGET=${MACOSX_DEPLOYMENT_TARGET} \
-                -DCMAKE_OSX_SYSROOT=${SDKROOT} \
                 -DCMAKE_MACOSX_RPATH=YES \
                 -DCMAKE_INSTALL_PREFIX=$stage
 
@@ -205,8 +112,7 @@ case "$AUTOBUILD_PLATFORM" in
         popd
 
         # create fat libs
-        lipo -create build_debug_x86/src/Debug/libndofdev.dylib build_debug_arm64/src/Debug/libndofdev.dylib -output ${stage}/lib/debug/libndofdev.dylib
-        lipo -create build_release_x86/src/Release/libndofdev.dylib build_release_arm64/src/Release/libndofdev.dylib -output ${stage}/lib/release/libndofdev.dylib
+        lipo -create build_release_x86/src/libndofdev.dylib build_release_arm64/src/libndofdev.dylib -output ${stage}/lib/release/libndofdev.dylib
 
         # create debug bundles
         pushd "${stage}/lib/debug"
