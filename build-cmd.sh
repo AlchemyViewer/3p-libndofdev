@@ -56,8 +56,8 @@ case "$AUTOBUILD_PLATFORM" in
     ;;
     darwin*)
         # Setup build flags
-        ARCH_FLAGS_X86="-arch x86_64 -mmacosx-version-min=${X86_DEPLOY} -isysroot ${SDKROOT} -msse4.2"
-        ARCH_FLAGS_ARM64="-arch arm64 -mmacosx-version-min=${ARM64_DEPLOY} -isysroot ${SDKROOT}"
+        ARCH_FLAGS_X86="-arch x86_64 -mmacosx-version-min=11.0 -msse4.2"
+        ARCH_FLAGS_ARM64="-arch arm64 -mmacosx-version-min=11.0"
         DEBUG_COMMON_FLAGS="-O0 -g -fPIC -DPIC -DTARGET_OS_MAC=1"
         RELEASE_COMMON_FLAGS="-O3 -g -fPIC -DPIC -fstack-protector-strong -DTARGET_OS_MAC=1"
         DEBUG_CFLAGS="$DEBUG_COMMON_FLAGS"
