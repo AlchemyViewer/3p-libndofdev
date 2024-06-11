@@ -121,7 +121,7 @@ struct hu_element_t
 	unsigned long type;						// the type defined by IOHIDElementType in IOHIDKeys.h
 	long usage;								// usage within above page from IOUSBHIDParser.h which defines specific usage
 	long usagePage;							// usage page from IOUSBHIDParser.h which defines general usage
-	void* cookie;				 			// unique value( within device of specific vendorID and productID ) which identifies element, will NOT change
+	IOHIDElementCookie cookie;				 			// unique value( within device of specific vendorID and productID ) which identifies element, will NOT change
 	long min;								// reported min value possible
 	long max;								// reported max value possible
 	long scaledMin;							// reported scaled min value possible

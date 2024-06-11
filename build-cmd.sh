@@ -99,7 +99,7 @@ case "$AUTOBUILD_PLATFORM" in
             CXXFLAGS="$ARCH_FLAGS_ARM64 $RELEASE_CXXFLAGS" \
             CPPFLAGS="$ARCH_FLAGS_ARM64 $RELEASE_CPPFLAGS" \
             LDFLAGS="$ARCH_FLAGS_ARM64 $RELEASE_LDFLAGS" \
-            cmake $TOP/../$SOURCE_DIR -GXcode -DBUILD_SHARED_LIBS:BOOL=ON \
+            cmake $TOP/../$SOURCE_DIR -G Ninja -DBUILD_SHARED_LIBS:BOOL=ON \
                 -DCMAKE_BUILD_TYPE=Release \
                 -DCMAKE_C_FLAGS="$ARCH_FLAGS_ARM64 $RELEASE_CFLAGS" \
                 -DCMAKE_CXX_FLAGS="$ARCH_FLAGS_ARM64 $RELEASE_CXXFLAGS" \
@@ -115,28 +115,19 @@ case "$AUTOBUILD_PLATFORM" in
         lipo -create build_release_x86/src/libndofdev.dylib build_release_arm64/src/libndofdev.dylib -output ${stage}/lib/release/libndofdev.dylib
 
         # create debug bundles
-        pushd "${stage}/lib/debug"
-            install_name_tool -id "@rpath/libndofdev.dylib" "libndofdev.dylib"
-            dsymutil libndofdev.dylib
-            strip -x -S libndofdev.dylib
-        popd
-
         pushd "${stage}/lib/release"
             install_name_tool -id "@rpath/libndofdev.dylib" "libndofdev.dylib"
             dsymutil libndofdev.dylib
             strip -x -S libndofdev.dylib
         popd
 
-        if [ -n "${APPLE_SIGNATURE:=""}" -a -n "${APPLE_KEY:=""}" -a -n "${APPLE_KEYCHAIN:=""}" ]; then
-            KEYCHAIN_PATH="$HOME/Library/Keychains/$APPLE_KEYCHAIN"
-            security unlock-keychain -p $APPLE_KEY $KEYCHAIN_PATH
+        if [ -n "${AUTOBUILD_KEYCHAIN_PATH:=""}" -a -n "${AUTOBUILD_KEYCHAIN_ID:=""}" ]; then
             for dylib in $stage/lib/*/libndofdev*.dylib;
             do
                 if [ -f "$dylib" ]; then
-                    codesign --keychain "$KEYCHAIN_PATH" --sign "$APPLE_SIGNATURE" --force --timestamp "$dylib" || true
+                    codesign --keychain $AUTOBUILD_KEYCHAIN_PATH --sign "$AUTOBUILD_KEYCHAIN_ID" --force --timestamp "$dylib" || true
                 fi
             done
-            security lock-keychain $KEYCHAIN_PATH
         else
             echo "Code signing not configured; skipping codesign."
         fi
