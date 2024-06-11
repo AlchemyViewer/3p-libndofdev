@@ -56,35 +56,28 @@ case "$AUTOBUILD_PLATFORM" in
     ;;
     darwin*)
         # Setup build flags
-        ARCH_FLAGS_X86="-arch x86_64 -mmacosx-version-min=11.0 -msse4.2"
-        ARCH_FLAGS_ARM64="-arch arm64 -mmacosx-version-min=11.0"
-        DEBUG_COMMON_FLAGS="-O0 -g -fPIC -DPIC -DTARGET_OS_MAC=1"
-        RELEASE_COMMON_FLAGS="-O3 -g -fPIC -DPIC -fstack-protector-strong -DTARGET_OS_MAC=1"
-        DEBUG_CFLAGS="$DEBUG_COMMON_FLAGS"
-        RELEASE_CFLAGS="$RELEASE_COMMON_FLAGS"
-        DEBUG_CXXFLAGS="$DEBUG_COMMON_FLAGS -std=c++17"
-        RELEASE_CXXFLAGS="$RELEASE_COMMON_FLAGS -std=c++17"
-        DEBUG_CPPFLAGS="-DPIC"
-        RELEASE_CPPFLAGS="-DPIC"
-        DEBUG_LDFLAGS="-Wl,-headerpad_max_install_names"
-        RELEASE_LDFLAGS="-Wl,-headerpad_max_install_names"
+        C_OPTS_X86="-arch x86_64 $LL_BUILD_RELEASE_CFLAGS"
+        C_OPTS_ARM64="-arch arm64 $LL_BUILD_RELEASE_CFLAGS"
+        CXX_OPTS_X86="-arch x86_64 $LL_BUILD_RELEASE_CXXFLAGS"
+        CXX_OPTS_ARM64="-arch arm64 $LL_BUILD_RELEASE_CXXFLAGS"
+        LINK_OPTS_X86="-arch x86_64 $LL_BUILD_RELEASE_LINKER"
+        LINK_OPTS_ARM64="-arch arm64 $LL_BUILD_RELEASE_LINKER"
+
+        # deploy target
+        export MACOSX_DEPLOYMENT_TARGET=${LL_BUILD_DARWIN_BASE_DEPLOY_TARGET}
 
         mkdir -p "$stage/lib/debug/"
         mkdir -p "$stage/lib/release/"
 
-        # x86 Deploy Target
-        export MACOSX_DEPLOYMENT_TARGET=11.0
-
         mkdir -p "build_release_x86"
         pushd "build_release_x86"
-            CFLAGS="$ARCH_FLAGS_X86 $RELEASE_CFLAGS" \
-            CXXFLAGS="$ARCH_FLAGS_X86 $RELEASE_CXXFLAGS" \
-            CPPFLAGS="$ARCH_FLAGS_X86 $RELEASE_CPPFLAGS" \
-            LDFLAGS="$ARCH_FLAGS_X86 $RELEASE_LDFLAGS" \
+            CFLAGS="$C_OPTS_X86" \
+            CXXFLAGS="$CXX_OPTS_X86" \
+            LDFLAGS="$LINK_OPTS_X86" \
             cmake $TOP/../$SOURCE_DIR -G Ninja -DBUILD_SHARED_LIBS:BOOL=ON \
                 -DCMAKE_BUILD_TYPE=Release \
-                -DCMAKE_C_FLAGS="$ARCH_FLAGS_X86 $RELEASE_CFLAGS" \
-                -DCMAKE_CXX_FLAGS="$ARCH_FLAGS_X86 $RELEASE_CXXFLAGS" \
+                -DCMAKE_C_FLAGS="$C_OPTS_X86" \
+                -DCMAKE_CXX_FLAGS="$CXX_OPTS_X86" \
                 -DCMAKE_OSX_ARCHITECTURES:STRING=x86_64 \
                 -DCMAKE_OSX_DEPLOYMENT_TARGET=${MACOSX_DEPLOYMENT_TARGET} \
                 -DCMAKE_MACOSX_RPATH=YES \
@@ -95,14 +88,13 @@ case "$AUTOBUILD_PLATFORM" in
 
         mkdir -p "build_release_arm64"
         pushd "build_release_arm64"
-            CFLAGS="$ARCH_FLAGS_ARM64 $RELEASE_CFLAGS" \
-            CXXFLAGS="$ARCH_FLAGS_ARM64 $RELEASE_CXXFLAGS" \
-            CPPFLAGS="$ARCH_FLAGS_ARM64 $RELEASE_CPPFLAGS" \
-            LDFLAGS="$ARCH_FLAGS_ARM64 $RELEASE_LDFLAGS" \
+            CFLAGS="$C_OPTS_ARM64" \
+            CXXFLAGS="$CXX_OPTS_ARM64" \
+            LDFLAGS="$LINK_OPTS_ARM64" \
             cmake $TOP/../$SOURCE_DIR -G Ninja -DBUILD_SHARED_LIBS:BOOL=ON \
                 -DCMAKE_BUILD_TYPE=Release \
-                -DCMAKE_C_FLAGS="$ARCH_FLAGS_ARM64 $RELEASE_CFLAGS" \
-                -DCMAKE_CXX_FLAGS="$ARCH_FLAGS_ARM64 $RELEASE_CXXFLAGS" \
+                -DCMAKE_C_FLAGS="$C_OPTS_ARM64" \
+                -DCMAKE_CXX_FLAGS="$CXX_OPTS_ARM64" \
                 -DCMAKE_OSX_ARCHITECTURES:STRING=arm64 \
                 -DCMAKE_OSX_DEPLOYMENT_TARGET=${MACOSX_DEPLOYMENT_TARGET} \
                 -DCMAKE_MACOSX_RPATH=YES \
