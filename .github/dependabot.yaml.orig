@@ -1,0 +1,17 @@
+<<<<<<< HEAD
+version: 2
+updates:
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+=======
+version: 2
+updates:
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly 
+>>>>>>> a0b7d990096f36d9e32c67d09a94fa5a0fff6401
