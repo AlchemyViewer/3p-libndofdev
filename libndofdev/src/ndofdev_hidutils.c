@@ -1207,7 +1207,7 @@ static void hu_GetElementInfo( CFTypeRef inElementCFDictRef, hu_element_t* inEle
 	// get the cookie
 	tCFTypeRef = CFDictionaryGetValue( inElementCFDictRef, CFSTR( kIOHIDElementCookieKey ) );
 	if ( tCFTypeRef && CFNumberGetValue( tCFTypeRef, kCFNumberLongType, &number ) ) {
-		inElement->cookie = (void*)(size_t)( IOHIDElementCookie ) number;
+		inElement->cookie = ( IOHIDElementCookie ) number;
 	} else {
 		inElement->cookie = ( IOHIDElementCookie ) 0;
 	}
