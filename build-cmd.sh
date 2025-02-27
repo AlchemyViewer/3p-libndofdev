@@ -15,11 +15,11 @@ PROJECT="libndofdev"
 VERSION="0.1.0"
 SOURCE_DIR="$PROJECT"
 
-if [ -z "$AUTOBUILD" ] ; then 
+if [ -z "$AUTOBUILD" ] ; then
     exit 1
 fi
 
-if [ "$OSTYPE" = "cygwin" ] ; then
+if [[ "$OSTYPE" == "cygwin" || "$OSTYPE" == "msys" ]] ; then
     autobuild="$(cygpath -u $AUTOBUILD)"
 else
     autobuild="$AUTOBUILD"
@@ -32,7 +32,11 @@ source_environment_tempfile="$stage/source_environment.sh"
 "$autobuild" source_environment > "$source_environment_tempfile"
 . "$source_environment_tempfile"
 
-echo "${VERSION}" > "${stage}/VERSION.txt"
+# remove_cxxstd
+source "$(dirname "$AUTOBUILD_VARIABLES_FILE")/functions"
+
+build=${AUTOBUILD_BUILD_ID:=0}
+echo "${VERSION}.${build}" > "${stage}/VERSION.txt"
 
 case "$AUTOBUILD_PLATFORM" in
     windows*)
@@ -40,7 +44,7 @@ case "$AUTOBUILD_PLATFORM" in
             load_vsvars
             msbuild.exe $(cygpath -w "$PROJECT.sln") /p:Configuration=Debug /p:Platform=$AUTOBUILD_WIN_VSPLATFORM
             msbuild.exe $(cygpath -w "$PROJECT.sln") /p:Configuration=Release /p:Platform=$AUTOBUILD_WIN_VSPLATFORM
-    
+
             mkdir -p "$stage/lib/debug"
             mkdir -p "$stage/lib/release"
 
@@ -55,82 +59,21 @@ case "$AUTOBUILD_PLATFORM" in
         popd
     ;;
     darwin*)
-        # Setup build flags
-        C_OPTS_X86="-arch x86_64 $LL_BUILD_RELEASE_CFLAGS"
-        C_OPTS_ARM64="-arch arm64 $LL_BUILD_RELEASE_CFLAGS"
-        CXX_OPTS_X86="-arch x86_64 $LL_BUILD_RELEASE_CXXFLAGS"
-        CXX_OPTS_ARM64="-arch arm64 $LL_BUILD_RELEASE_CXXFLAGS"
-        LINK_OPTS_X86="-arch x86_64 $LL_BUILD_RELEASE_LINKER"
-        LINK_OPTS_ARM64="-arch arm64 $LL_BUILD_RELEASE_LINKER"
+        export MACOSX_DEPLOYMENT_TARGET="$LL_BUILD_DARWIN_DEPLOY_TARGET"
 
-        # deploy target
-        export MACOSX_DEPLOYMENT_TARGET=${LL_BUILD_DARWIN_BASE_DEPLOY_TARGET}
-
-        mkdir -p "$stage/lib/debug/"
-        mkdir -p "$stage/lib/release/"
-
-        mkdir -p "build_release_x86"
-        pushd "build_release_x86"
-            CFLAGS="$C_OPTS_X86" \
-            CXXFLAGS="$CXX_OPTS_X86" \
-            LDFLAGS="$LINK_OPTS_X86" \
-            cmake $TOP/../$SOURCE_DIR -G Ninja -DBUILD_SHARED_LIBS:BOOL=ON \
-                -DCMAKE_BUILD_TYPE=Release \
-                -DCMAKE_C_FLAGS="$C_OPTS_X86" \
-                -DCMAKE_CXX_FLAGS="$CXX_OPTS_X86" \
-                -DCMAKE_OSX_ARCHITECTURES:STRING=x86_64 \
-                -DCMAKE_OSX_DEPLOYMENT_TARGET=${MACOSX_DEPLOYMENT_TARGET} \
-                -DCMAKE_MACOSX_RPATH=YES \
-                -DCMAKE_INSTALL_PREFIX=$stage
-
-            cmake --build . --config Release
-        popd
-
-        mkdir -p "build_release_arm64"
-        pushd "build_release_arm64"
-            CFLAGS="$C_OPTS_ARM64" \
-            CXXFLAGS="$CXX_OPTS_ARM64" \
-            LDFLAGS="$LINK_OPTS_ARM64" \
-            cmake $TOP/../$SOURCE_DIR -G Ninja -DBUILD_SHARED_LIBS:BOOL=ON \
-                -DCMAKE_BUILD_TYPE=Release \
-                -DCMAKE_C_FLAGS="$C_OPTS_ARM64" \
-                -DCMAKE_CXX_FLAGS="$CXX_OPTS_ARM64" \
-                -DCMAKE_OSX_ARCHITECTURES:STRING=arm64 \
-                -DCMAKE_OSX_DEPLOYMENT_TARGET=${MACOSX_DEPLOYMENT_TARGET} \
-                -DCMAKE_MACOSX_RPATH=YES \
-                -DCMAKE_INSTALL_PREFIX=$stage
-
-            cmake --build . --config Release
-        popd
-
-        # create fat libs
-        lipo -create build_release_x86/src/libndofdev.dylib build_release_arm64/src/libndofdev.dylib -output ${stage}/lib/release/libndofdev.dylib
-
-        # create debug bundles
-        pushd "${stage}/lib/release"
-            install_name_tool -id "@rpath/libndofdev.dylib" "libndofdev.dylib"
+        opts="-DTARGET_OS_MAC $LL_BUILD_RELEASE"
+        cmake ../libndofdev -DCMAKE_CXX_FLAGS="$opts" \
+            -DCMAKE_C_FLAGS="$(remove_cxxstd $opts)" \
+            -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=${MACOSX_DEPLOYMENT_TARGET} \
+            -DCMAKE_MACOSX_RPATH=YES
+        make -j$(nproc)
+        mkdir -p "$stage/lib/release"
+        cp "src/libndofdev.dylib" "$stage/lib/release"
+        pushd "$stage/lib/release/"
             dsymutil libndofdev.dylib
             strip -x -S libndofdev.dylib
         popd
-
-        if [ -n "${AUTOBUILD_KEYCHAIN_PATH:=""}" -a -n "${AUTOBUILD_KEYCHAIN_ID:=""}" ]; then
-            for dylib in $stage/lib/*/libndofdev*.dylib;
-            do
-                if [ -f "$dylib" ]; then
-                    codesign --keychain $AUTOBUILD_KEYCHAIN_PATH --sign "$AUTOBUILD_KEYCHAIN_ID" --force --timestamp "$dylib" || true
-                fi
-            done
-        else
-            echo "Code signing not configured; skipping codesign."
-        fi
-    ;;
-    linux*)
-        # Given forking and future development work, it seems unwise to
-        # hardcode the actual URL of the current project's libndofdef-linux
-        # repository in this message. Try to determine the URL of this
-        # libndofdev repository and prepend "open-" as a suggestion.
-        echo "Linux libndofdev is in a separate open-libndofdev bitbucket repository \
--- try $(hg paths default | sed 's/libndofdev/open-&/')" 1>&2 ; exit 1
     ;;
 esac
 
